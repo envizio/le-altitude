@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Leading Edge">
+  <rect width="64" height="64" rx="12" fill="#FF6B1A"/>
+  <g fill="#04060D">
+    <rect x="16" y="14" width="10" height="36"/>
+    <rect x="16" y="14" width="33" height="9"/>
+    <rect x="16" y="27.5" width="26" height="8"/>
+    <rect x="16" y="41" width="33" height="9"/>
+  </g>
+</svg>

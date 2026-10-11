@@ -3,186 +3,241 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#000000">
+<meta name="theme-color" content="#04060D">
 <link rel="manifest" href="manifest.json">
-<link rel="icon" href="icon-192.png">
-<title>FlySight Altitude</title>
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Leading Edge Live</title>
 <style>
+  /* Leading Edge tokens (colors_and_type.css); fonts are self-hosted so the app works offline */
+  @font-face { font-family: "Anton"; src: url("fonts/anton.woff2") format("woff2"); font-display: swap; }
+  @font-face { font-family: "Archivo"; src: url("fonts/archivo.woff2") format("woff2"); font-weight: 400 800; font-display: swap; }
+  @font-face { font-family: "JetBrains Mono"; src: url("fonts/mono.woff2") format("woff2"); font-weight: 400 700; font-display: swap; }
+  :root {
+    --ink-1000: #04060D; --ink-900: #07091A; --ink-400: #4A5781; --ink-300: #7E8AAE; --ink-200: #B8BFD4;
+    --signal-500: #FF6B1A; --edge-500: #3DD9D6; --success: #4ECB81; --warning: #E9B341;
+    --border: rgba(255, 255, 255, 0.10); --border-strong: rgba(255, 255, 255, 0.22);
+    --font-display: "Anton", "Arial Narrow", sans-serif;
+    --font-body: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   html, body { height: 100%; margin: 0; }
   body {
-    background: #000; color: #fff;
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--ink-1000); color: #fff; font-family: var(--font-body);
     display: flex; flex-direction: column;
     padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
     -webkit-user-select: none; user-select: none;
   }
-  header { display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: #9aa; }
-  #dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #555; margin-right: 8px; }
-  #dot.live { background: #2ecc71; }
-  #dot.stale { background: #f39c12; }
-  main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-  #label { font-size: 14px; letter-spacing: .15em; color: #9aa; text-transform: uppercase; }
-  #alt { font-size: min(30vw, 38vh); font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
-  #unit { font-size: 28px; color: #9aa; }
-  #secondary { display: flex; gap: 32px; margin-top: 28px; font-variant-numeric: tabular-nums; }
-  #secondary div { font-size: 26px; }
-  #secondary small { display: block; font-size: 12px; color: #9aa; letter-spacing: .1em; text-transform: uppercase; }
-  footer { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .mono { font-family: var(--font-mono); font-size: 11px; font-weight: 500; letter-spacing: .22em; text-transform: uppercase; color: var(--ink-300); }
+  a { color: inherit; text-decoration: none; }
+
+  /* Header and top-level navigation */
+  header { display: flex; justify-content: space-between; align-items: stretch; gap: 12px; border-bottom: 1px solid var(--border); }
+  header img { height: 26px; width: auto; display: block; margin-bottom: 14px; }
+  nav { display: flex; gap: 4px; }
+  nav a { display: flex; align-items: center; padding: 0 12px 12px; border-bottom: 2px solid transparent; margin-bottom: -1px; letter-spacing: .18em; }
+  nav a.on { color: #fff; border-bottom-color: var(--signal-500); }
+  .view { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .view.scroll { display: block; overflow-y: auto; padding-top: 18px; }
+
+  /* Live */
+  #statusbar { display: flex; align-items: center; padding: 12px 0; letter-spacing: .14em; }
+  #status { flex: 1; }
+  #age { color: var(--signal-500); white-space: nowrap; }
+  #dot { flex: none; width: 8px; height: 8px; background: var(--ink-300); margin-right: 10px; }
+  #dot.live { background: var(--success); }
+  #dot.stale { background: var(--warning); }
+  main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; min-height: 0; }
+  #alt { font-family: var(--font-display); font-size: min(34vw, 34vh); line-height: .96; letter-spacing: -.015em; margin-top: 10px; }
+  #unit { font-family: var(--font-display); font-size: 32px; line-height: 1; color: var(--signal-500); text-transform: uppercase; }
+  #secondary, .stats { display: grid; grid-template-columns: 1fr 1fr; width: 100%; border: 1px solid var(--border); }
+  #secondary { margin-top: 28px; }
+  #secondary > div { padding: 12px 8px; }
+  #secondary > div + div { border-left: 1px solid var(--border); }
+  #secondary b { display: block; font-family: var(--font-display); font-weight: 400; font-size: 40px; line-height: 1.1; }
+  footer { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
   button {
-    font: inherit; font-size: 16px; font-weight: 600; color: #fff; background: #222;
-    border: 1px solid #444; border-radius: 12px; padding: 16px 8px;
+    font-family: var(--font-mono); font-size: 12px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase;
+    color: #fff; background: var(--ink-900); border: 1px solid var(--border-strong); border-radius: 0; padding: 16px 4px;
   }
-  button.primary { background: #1e6fff; border-color: #1e6fff; grid-column: 1 / -1; font-size: 20px; padding: 20px; }
-  button:disabled { opacity: .4; }
-  #msg { min-height: 20px; margin: 10px 0; font-size: 13px; color: #f39c12; text-align: center; }
-  #raw { font: 11px ui-monospace, Consolas, monospace; color: #566; text-align: center; word-break: break-all; min-height: 14px; }
+  button:active { border-color: var(--signal-500); color: var(--signal-500); }
+  button:disabled { opacity: .35; }
+  button.primary {
+    grid-column: 1 / -1; padding: 18px; background: var(--signal-500); border-color: var(--signal-500); color: var(--ink-1000);
+    font-family: var(--font-display); font-size: 24px; letter-spacing: .04em;
+  }
+  button.primary:active { background: #FF8A4D; color: var(--ink-1000); }
+  button.primary.off { background: transparent; color: #fff; border-color: var(--border-strong); }
+  #dzBtn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #msg { min-height: 18px; margin: 10px 0 6px; font-size: 13px; line-height: 1.4; color: var(--warning); text-align: center; }
+  #showAll { margin-bottom: 8px; color: var(--warning); border-color: var(--warning); }
+  #raw { font-size: 9px; letter-spacing: .04em; color: var(--ink-400); text-align: center; word-break: break-all; min-height: 12px; margin-bottom: 8px; text-transform: none; }
+
+  /* Jumps list */
+  h1 { font-family: var(--font-display); font-weight: 400; font-size: 56px; line-height: .96; text-transform: uppercase; margin: 8px 0 18px; }
+  .actions2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .actions2 .go { background: var(--signal-500); border-color: var(--signal-500); color: var(--ink-1000); }
+  #importStatus { min-height: 18px; margin: 10px 0; font-size: 13px; color: var(--warning); }
+  .empty, .note { color: var(--ink-300); font-size: 14px; line-height: 1.55; }
+  .jumpRow { display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: end; padding: 14px 0; border-top: 1px solid var(--border); }
+  .jumpRow .mono { grid-column: 1 / -1; }
+  .jumpRow b { font-family: var(--font-display); font-weight: 400; font-size: 28px; line-height: 1; }
+  .jumpRow b i { font-family: var(--font-mono); font-style: normal; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-300); margin: 0 12px 0 5px; }
+  .chip { font-family: var(--font-mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; padding: 4px 8px; border: 1px solid var(--border-strong); color: var(--ink-200); white-space: nowrap; }
+  .chip.ok { border-color: var(--success); color: var(--success); }
+  .chip.warn { border-color: var(--signal-500); color: var(--signal-500); }
+
+  /* Jump detail */
+  .back { display: inline-block; padding: 4px 0 16px; color: #fff; }
+  .tabs2 { display: flex; gap: 18px; margin: 14px 0 16px; font-family: var(--font-display); font-size: 26px; text-transform: uppercase; line-height: 1.2; }
+  .tabs2 .on { border-bottom: 2px solid var(--signal-500); }
+  .tabs2 .soon { color: var(--ink-400); }
+  .verdict { border: 1px solid var(--border-strong); border-left: 6px solid var(--ink-300); padding: 14px 14px 12px; }
+  .verdict.ok { border-left-color: var(--success); }
+  .verdict.warn { border-left-color: var(--signal-500); }
+  .verdict h2 { font-family: var(--font-display); font-weight: 400; font-size: 34px; line-height: 1; text-transform: uppercase; margin: 0 0 8px; }
+  .verdict.ok h2 { color: var(--success); }
+  .verdict.warn h2 { color: var(--signal-500); }
+  .verdict p { margin: 0; font-size: 15px; line-height: 1.5; color: var(--ink-200); }
+  .settings { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 8px; margin: 14px 0; }
+  .settings label:first-child { grid-column: 1 / -1; }
+  .settings select, dialog input, dialog select {
+    display: block; width: 100%; font-family: var(--font-body); font-size: 16px; letter-spacing: 0; text-transform: none; color: #fff;
+    background: var(--ink-1000); border: 1px solid var(--border-strong); border-radius: 0; padding: 12px; margin-top: 6px;
+    -webkit-user-select: text; user-select: text;
+  }
+  .stats > div { padding: 12px 10px; border-top: 1px solid var(--border); }
+  .stats > div:nth-child(-n+2) { border-top: 0; }
+  .stats > div:nth-child(even) { border-left: 1px solid var(--border); }
+  .stats b { display: block; font-family: var(--font-display); font-weight: 400; font-size: 30px; line-height: 1.15; }
+  .stats .mono { font-size: 10px; letter-spacing: .14em; }
+  .stats.three { grid-template-columns: 1fr 1fr 1fr; }
+  .stats.three > div { border-top: 0; border-left: 1px solid var(--border); padding: 12px 8px; }
+  .stats.three > div:first-child { border-left: 0; }
+  .stats.three b { font-size: 24px; }
+  .stats.three i { display: block; margin-top: 6px; font-family: var(--font-mono); font-style: normal; font-size: 10px; color: var(--ink-200); }
+  .sub { margin: 18px 0 8px; }
+  #jBaro { width: 100%; }
+  #jBaroStatus { margin: 8px 0 0; }
+  #readout { position: sticky; top: 0; z-index: 1; background: var(--ink-1000); padding: 12px 0; margin-top: 10px; color: var(--signal-500); letter-spacing: .06em; border-bottom: 1px solid var(--border); }
+  .chart { margin-top: 18px; }
+  .chart svg { display: block; width: 100%; height: auto; touch-action: pan-y; margin-top: 6px; }
+  .chart .band { fill: rgba(255, 107, 26, .13); }
+  .chart .grid { stroke: var(--border); stroke-width: 1; }
+  .chart .tick { font-family: var(--font-mono); font-size: 9px; fill: var(--ink-300); }
+  .chart .ref { stroke: var(--ink-200); stroke-width: 1; stroke-dasharray: 4 3; }
+  .chart .reflabel { font-family: var(--font-mono); font-size: 9px; fill: var(--ink-200); }
+  .chart .line { fill: none; stroke-width: 2; stroke-linejoin: round; }
+  .chart .white { stroke: #fff; }
+  .chart .cyan { stroke: var(--edge-500); }
+  .chart .orange { stroke: var(--signal-500); }
+  .chart .cur { stroke: #fff; stroke-width: 1; }
+  .key { display: inline-block; width: 9px; height: 9px; margin: 0 5px 0 10px; }
+  .key.band { background: rgba(255, 107, 26, .35); }
+  .key.cyan { background: var(--edge-500); }
+  .key.orange { background: var(--signal-500); }
+  .note { margin: 18px 0; font-size: 13px; }
+  #jDelete { width: 100%; margin-bottom: 8px; color: var(--ink-200); }
+
+  /* Dialogs */
+  dialog { width: min(92vw, 420px); max-height: 86vh; background: var(--ink-900); color: #fff; border: 1px solid var(--border-strong); border-radius: 0; padding: 20px; }
+  dialog::backdrop { background: rgba(4, 6, 13, .8); }
+  dialog h2 { font-family: var(--font-display); font-weight: 400; font-size: 32px; line-height: 1; text-transform: uppercase; margin: 8px 0 18px; }
+  dialog label { display: block; margin: 14px 0 0; }
+  dialog .row { display: grid; grid-template-columns: 1fr 96px; gap: 8px; }
+  dialog .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 18px; }
+  dialog .wide { grid-column: 1 / -1; }
+  dialog button.save { background: var(--signal-500); border-color: var(--signal-500); color: var(--ink-1000); }
+  #fsList { display: grid; gap: 6px; margin: 12px 0; }
+  #fsList button { text-align: left; padding: 14px 12px; }
+  #fsStatus { min-height: 18px; font-size: 13px; line-height: 1.45; color: var(--warning); margin-bottom: 12px; }
+  #fsClose { width: 100%; }
 </style>
 </head>
 <body>
 <header>
-  <span><span id="dot"></span><span id="status">Not connected</span></span>
-  <span id="age"></span>
+  <img src="logo-light.webp" alt="Leading Edge">
+  <nav>
+    <a id="tabLive" class="mono on" href="#live">Live</a>
+    <a id="tabJumps" class="mono" href="#jumps">Jumps</a>
+  </nav>
 </header>
 
-<main>
-  <div id="label">GPS altitude (MSL)</div>
-  <div id="alt">---</div>
-  <div id="unit">ft</div>
-  <div id="secondary">
-    <div><span id="vs">--</span><small>Vertical mph</small></div>
-    <div><span id="gs">--</span><small>Ground mph</small></div>
+<section id="liveView" class="view">
+  <div id="statusbar" class="mono"><span id="dot"></span><span id="status">Not connected</span><span id="age"></span></div>
+  <main>
+    <div id="label" class="mono">[ GPS altitude // MSL ]</div>
+    <div id="alt">---</div>
+    <div id="unit">ft</div>
+    <div id="secondary">
+      <div><b id="vs">--</b><span class="mono">Vertical mph</span></div>
+      <div><b id="gs">--</b><span class="mono">Ground mph</span></div>
+    </div>
+  </main>
+  <div id="msg"></div>
+  <button id="showAll" hidden>FlySight not listed? Show all devices</button>
+  <div id="raw" class="mono">LE LIVE v17</div>
+  <footer>
+    <button id="connect" class="primary">Connect FlySight →</button>
+    <button id="units">ft / m</button>
+    <button id="dzBtn">Dropzone</button>
+    <button id="mode" disabled>MSL</button>
+  </footer>
+</section>
+
+<section id="jumpsView" class="view scroll" hidden>
+  <div class="mono">[ Logbook // acro ]</div>
+  <h1>Jumps</h1>
+  <div class="actions2">
+    <button id="importFlysight" class="go">From FlySight →</button>
+    <button id="importFile">From file</button>
   </div>
-</main>
+  <input id="fileInput" type="file" accept=".csv,.CSV,text/csv,text/comma-separated-values" multiple hidden>
+  <div id="importStatus"></div>
+  <div id="jumpList"></div>
+</section>
 
-<div id="msg"></div>
-<div id="raw"></div>
-<footer>
-  <button id="connect" class="primary">Connect FlySight</button>
-  <button id="units">ft / m</button>
-  <button id="zero">Zero here</button>
-  <button id="clear">MSL</button>
-</footer>
+<section id="jumpView" class="view scroll" hidden></section>
 
+<dialog id="dzDialog">
+  <div class="mono">[ Dropzone // elevation ]</div>
+  <h2>Dropzone</h2>
+  <label class="mono" for="dzSel">Saved dropzones</label>
+  <select id="dzSel"></select>
+  <label class="mono" for="dzName">Name</label>
+  <input id="dzName" maxlength="30" autocomplete="off" placeholder="e.g. Home DZ">
+  <label class="mono" for="dzElev">Elevation above sea level</label>
+  <div class="row">
+    <input id="dzElev" type="number" inputmode="decimal" step="any" placeholder="0">
+    <select id="dzUnit"><option value="ft">ft</option><option value="m">m</option></select>
+  </div>
+  <div class="actions">
+    <button id="dzGps" class="wide">Use current GPS altitude</button>
+    <button id="dzSave" class="save">Save + use</button>
+    <button id="dzDelete">Delete</button>
+    <button id="dzClose" class="wide">Close</button>
+  </div>
+</dialog>
+
+<dialog id="fsDialog">
+  <div id="fsPath" class="mono">[ FlySight // / ]</div>
+  <h2>Pick a track</h2>
+  <div id="fsList"></div>
+  <div id="fsStatus"></div>
+  <button id="fsClose">Close</button>
+</dialog>
+
+<script src="analysis.js"></script>
+<script src="fsfiles.js"></script>
+<script src="app.js"></script>
+<script src="jumps.js"></script>
 <script>
-// UUIDs and packet layout from flysight/flysight-2-firmware (STM32_WPAN/App/custom_stm.c, custom_app.c)
-const GNSS_SERVICE = '00000001-cc7a-482a-984a-7f2ed5b3e58f';
-const GNSS_PV_CHAR = '00000000-8e22-4541-9d4c-21edae82ed19';
-const FLYSIGHT_COMPANY_ID = 0x09DB;
-
-const $ = id => document.getElementById(id);
-let device = null, feet = true, zeroMm = null, lastMm = null, lastRx = 0, wakeLock = null, wantConnected = false;
-
-function setStatus(text, cls) { $('status').textContent = text; $('dot').className = cls || ''; }
-function setMsg(text) { $('msg').textContent = text || ''; }
-
-function render() {
-  $('unit').textContent = feet ? 'ft' : 'm';
-  $('label').textContent = zeroMm === null ? 'GPS altitude (MSL)' : 'Height above zero point';
-  if (lastMm === null) return;
-  const m = (lastMm - (zeroMm ?? 0)) / 1000;
-  $('alt').textContent = Math.round(feet ? m * 3.28084 : m).toLocaleString();
-}
-
-function onPacket(e) {
-  const dv = e.target.value;
-  $('raw').textContent = [...new Uint8Array(dv.buffer, dv.byteOffset, dv.byteLength)]
-    .map(b => b.toString(16).padStart(2, '0')).join(' ');
-
-  // Byte 0 is a field mask (0xb0 = time of week + position + velocity); everything is little-endian.
-  const mask = dv.getUint8(0);
-  let o = 1;
-  if (mask & 0x80) o += 4;                       // iTOW (ms)
-  if (!(mask & 0x20) || dv.byteLength < o + 12) { setMsg('Packet has no position data'); return; }
-  lastMm = dv.getInt32(o + 8, true);             // lon, lat, then hMSL (mm)
-  o += 12;
-  if ((mask & 0x10) && dv.byteLength >= o + 12) {
-    const velN = dv.getInt32(o, true), velE = dv.getInt32(o + 4, true), velD = dv.getInt32(o + 8, true); // mm/s
-    const MPH = 0.00223694;
-    $('vs').textContent = Math.round(velD * MPH);  // positive = descending
-    $('gs').textContent = Math.round(Math.hypot(velN, velE) * MPH);
-  }
-  lastRx = Date.now();
-  setMsg('');
-  render();
-}
-
-async function subscribe() {
-  setStatus('Connecting…');
-  const server = await device.gatt.connect();
-  const service = await server.getPrimaryService(GNSS_SERVICE);
-  const ch = await service.getCharacteristic(GNSS_PV_CHAR);
-  ch.addEventListener('characteristicvaluechanged', onPacket);
-  await ch.startNotifications();
-  setStatus('Connected — waiting for GPS', 'stale');
-  $('connect').textContent = 'Disconnect';
-  try { wakeLock = await navigator.wakeLock?.request('screen'); } catch {}
-}
-
-async function reconnect() {
-  for (let i = 0; wantConnected && i < 20; i++) {
-    try { await subscribe(); return; }
-    catch { await new Promise(r => setTimeout(r, 1500)); }
-  }
-  if (wantConnected) { setStatus('Disconnected'); $('connect').textContent = 'Connect FlySight'; wantConnected = false; }
-}
-
-$('connect').onclick = async () => {
-  if (wantConnected) {
-    wantConnected = false;
-    device?.gatt.disconnect();
-    $('connect').textContent = 'Connect FlySight';
-    setStatus('Not connected');
-    return;
-  }
-  if (!navigator.bluetooth) {
-    setMsg('This browser has no Web Bluetooth. Use Chrome on Android, or the Bluefy browser on iPhone.');
-    return;
-  }
-  try {
-    setMsg('');
-    device = await navigator.bluetooth.requestDevice({
-      filters: [{ namePrefix: 'FlySight' }, { manufacturerData: [{ companyIdentifier: FLYSIGHT_COMPANY_ID }] }],
-      optionalServices: [GNSS_SERVICE],
-    });
-    device.addEventListener('gattserverdisconnected', () => {
-      if (!wantConnected) return;
-      setStatus('Reconnecting…', 'stale');
-      reconnect();
-    });
-    wantConnected = true;
-    await subscribe();
-  } catch (err) {
-    wantConnected = false;
-    setStatus('Not connected');
-    if (err.name !== 'NotFoundError') setMsg(err.message + ' — if this is the first connection, put the FlySight in pairing mode and accept the pairing prompt.');
-  }
-};
-
-$('units').onclick = () => { feet = !feet; render(); };
-$('zero').onclick = () => { if (lastMm !== null) { zeroMm = lastMm; render(); } };
-$('clear').onclick = () => { zeroMm = null; render(); };
-
-setInterval(() => {
-  if (!lastRx) return;
-  const age = (Date.now() - lastRx) / 1000;
-  $('age').textContent = age < 2 ? 'live' : `${Math.round(age)}s ago`;
-  if (wantConnected && device?.gatt.connected) setStatus(age < 2 ? 'Live' : 'No data — is the FlySight on with a fix?', age < 2 ? 'live' : 'stale');
-}, 500);
-
-// Cache the app so it opens with no data connection
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js')
-    .then(() => navigator.serviceWorker.ready)
-    .then(() => { if (!lastRx) $('age').textContent = 'saved for offline'; })
-    .catch(() => {});
-}
-
-document.addEventListener('visibilitychange', async () => {
-  if (document.visibilityState === 'visible' && wantConnected) {
-    try { wakeLock = await navigator.wakeLock?.request('screen'); } catch {}
-  }
-});
+render();
+route();
+resume();
 </script>
 </body>
 </html>

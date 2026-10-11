@@ -1,9 +1,10 @@
-// Serve from cache first so the app opens with no signal; refresh the cache in the background when online.
-const CACHE = 'flysight-altitude-v1';
-const FILES = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png'];
+// Try the network briefly so updates arrive when online; fall back to the cache so the app opens with no signal.
+const CACHE = 'le-live-v17';
+const FILES = ['./', 'index.html', 'analysis.js', 'fsfiles.js', 'app.js', 'jumps.js', 'manifest.json', 'favicon.ico', 'favicon.svg', 'apple-touch-icon.png', 'favicon-192.png', 'favicon-512.png',
+  'logo-light.webp', 'fonts/anton.woff2', 'fonts/archivo.woff2', 'fonts/mono.woff2'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES.map(f => new Request(f, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {
@@ -19,11 +20,14 @@ self.addEventListener('fetch', e => {
   e.respondWith(
     caches.open(CACHE).then(async cache => {
       const cached = await cache.match(e.request, { ignoreSearch: true });
-      const fresh = fetch(e.request).then(res => {
+      // 'no-cache' makes the browser check with the server instead of trusting its 10-minute copy
+      const fresh = fetch(e.request, { cache: 'no-cache' }).then(res => {
         if (res.ok) cache.put(e.request, res.clone());
         return res;
-      }).catch(() => cached);
-      return cached || fresh;
+      });
+      if (!cached) return fresh;
+      const timeout = new Promise(r => setTimeout(() => r(cached), 2500));
+      return Promise.race([fresh.catch(() => cached), timeout]);
     })
   );
 });
