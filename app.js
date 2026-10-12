@@ -3,6 +3,7 @@
 const GNSS_SERVICE = '00000001-cc7a-482a-984a-7f2ed5b3e58f';
 const GNSS_PV_CHAR = '00000000-8e22-4541-9d4c-21edae82ed19';
 const BARO_CHAR = '00000008-8e22-4541-9d4c-21edae82ed19';   // firmware with barometer streaming only
+const SD_CONTROL_CHAR = '00000006-8e22-4541-9d4c-21edae82ed19';
 const STORE_KEY = 'le-live';
 
 const $ = id => document.getElementById(id);
@@ -28,7 +29,7 @@ const dzElevM = dz => dz.unit === 'ft' ? dz.elev / FT_PER_M : dz.elev;
 function render() {
   const dz = activeDz(), agl = dz && state.agl;
   $('unit').textContent = state.feet ? 'ft' : 'm';
-  $('label').textContent = agl ? `[ Height // above ${dz.name} ]` : '[ GPS altitude // MSL ]';
+  $('label').textContent = agl ? `[ Altitude // above ${dz.name} ]` : '[ GPS altitude // MSL ]';
   $('dzBtn').textContent = dz ? dz.name : 'Dropzone';
   $('mode').textContent = agl ? 'AGL' : 'MSL';
   $('mode').disabled = !dz;
@@ -69,13 +70,22 @@ function onPacket(e) {
   render();
 }
 
-// Barometer packet, little-endian: time (uint32, ms), pressure (int32, Pa*100), temperature (int16, °C*100),
-// start pressure (int32, Pa*100). The start pressure is the FlySight's first sample since it was switched on,
-// held for the whole session, so the ground reference does not depend on when the phone connected.
+// Barometer packet, little-endian. Byte 0 is a field mask, like the GNSS packet: 0x80 time (uint32, ms),
+// 0x40 pressure (int32, Pa*100), 0x20 temperature (int16, °C*100), 0x10 start pressure (int32, Pa*100), in that
+// order. The start pressure is the FlySight's first sample since it was switched on, held for the whole session,
+// so the ground reference does not depend on when the phone connected.
 function onBaro(e) {
   const dv = e.target.value;
-  if (dv.byteLength < 14) return;
-  const pa = dv.getInt32(4, true) / 100, startPa = dv.getInt32(10, true) / 100;
+  if (dv.byteLength < 1) return;
+  const mask = dv.getUint8(0);
+  if ((mask & 0x50) !== 0x50) return;           // needs pressure and start pressure
+  let o = 1;
+  if (mask & 0x80) o += 4;
+  if (dv.byteLength < o + 4 + (mask & 0x20 ? 2 : 0) + 4) return;
+  const pa = dv.getInt32(o, true) / 100;
+  o += 4;
+  if (mask & 0x20) o += 2;
+  const startPa = dv.getInt32(o, true) / 100;
   if (!(pa > 10000 && pa < 110000 && startPa > 10000 && startPa < 110000)) return;
   baro = { h: pressureAltitude(pa) - pressureAltitude(startPa), at: Date.now() };
   render();
@@ -101,6 +111,13 @@ async function subscribe() {
   await ch.startNotifications();
   try {
     const bc = await service.getCharacteristic(BARO_CHAR);
+    // The barometer mask and divider last until the FlySight is switched off, so another app may have changed
+    // them. Ask for the default packet (with the start pressure) at the full rate.
+    try {
+      const cp = await service.getCharacteristic(SD_CONTROL_CHAR);
+      await cp.writeValue(Uint8Array.of(0x03, 0, 0xf0));   // set sensor mask: baro, time + pressure + temp + start
+      await cp.writeValue(Uint8Array.of(0x10, 0, 1, 0));   // set sensor divider: baro, every sample
+    } catch {}
     bc.addEventListener('characteristicvaluechanged', onBaro);
     await bc.startNotifications();
     hasBaro = true;

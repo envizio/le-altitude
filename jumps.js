@@ -232,7 +232,7 @@ async function showJump(id) {
 // Barometric height at the three moments that matter, beside the GPS figure for the same instant
 function baroBlock(jump, a, ref, datum) {
   if (!jump.baro) return `
-    <div class="mono sub">Barometric height</div>
+    <div class="mono sub">Barometric altitude</div>
     <button id="jBaro">Add barometer data (SENSOR.CSV)</button>
     <input id="jBaroFile" type="file" accept=".csv,.CSV,text/csv,text/comma-separated-values" hidden>
     <div id="jBaroStatus" class="note">The barometer is logged in SENSOR.CSV, in the same folder as the track.</div>`;
@@ -240,7 +240,7 @@ function baroBlock(jump, a, ref, datum) {
     <div><b>${fmtAlt(baroAt(jump.baro, jump.track, t))}</b><span class="mono">${label}</span>
     <i>GPS ${fmtAlt(valueAt(jump.track, 'h', t) - ref)}${datum === 'MSL' ? ' MSL' : ''}</i></div>`;
   return `
-    <div class="mono sub">Barometric height // zeroed on the ground</div>
+    <div class="mono sub">Barometric altitude // zeroed on the ground</div>
     <div class="stats three">
       ${cell('Aircraft exit', a.tExit)}${cell('Window entry', a.tTop)}${cell('Window exit', a.tBottom)}
     </div>`;
