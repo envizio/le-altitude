@@ -51,8 +51,17 @@
   #dot.live { background: var(--success); }
   #dot.stale { background: var(--warning); }
   main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; min-height: 0; }
-  #alt { font-family: var(--font-display); font-size: min(34vw, 34vh); line-height: .96; letter-spacing: -.015em; margin-top: 10px; }
-  #unit { font-family: var(--font-display); font-size: 32px; line-height: 1; color: var(--signal-500); text-transform: uppercase; }
+  /* GPS and barometric altitude together: stacked on a phone held upright, side by side on a tablet or in landscape */
+  #readouts { display: grid; grid-template-columns: 1fr; width: 100%; }
+  .readout { padding: 12px 0; }
+  .readout + .readout { border-top: 1px solid var(--border); }
+  .readout .big { font-family: var(--font-display); font-size: min(30vw, 15vh); line-height: .96; letter-spacing: -.015em; margin-top: 10px; }
+  .readout .unit { font-family: var(--font-display); font-size: 28px; line-height: 1; color: var(--signal-500); text-transform: uppercase; }
+  @media (min-width: 640px), (orientation: landscape) {
+    #readouts { grid-template-columns: 1fr 1fr; }
+    .readout + .readout { border-top: 0; border-left: 1px solid var(--border); }
+    .readout .big { font-size: min(15vw, 30vh); }
+  }
   #secondary, .stats { display: grid; grid-template-columns: 1fr 1fr; width: 100%; border: 1px solid var(--border); }
   #secondary { margin-top: 28px; }
   #secondary > div { padding: 12px 8px; }
@@ -169,9 +178,18 @@
 <section id="liveView" class="view">
   <div id="statusbar" class="mono"><span id="dot"></span><span id="status">Not connected</span><span id="age"></span></div>
   <main>
-    <div id="label" class="mono">[ GPS altitude // MSL ]</div>
-    <div id="alt">---</div>
-    <div id="unit">ft</div>
+    <div id="readouts">
+      <div class="readout">
+        <div id="label" class="mono">[ GPS altitude // MSL ]</div>
+        <div id="alt" class="big">---</div>
+        <div id="unit" class="unit">ft</div>
+      </div>
+      <div class="readout">
+        <div id="baroLabel" class="mono">[ Barometric // above switch-on ]</div>
+        <div id="baroAlt" class="big">---</div>
+        <div id="baroUnit" class="unit">ft</div>
+      </div>
+    </div>
     <div id="secondary">
       <div><b id="vs">--</b><span class="mono">Vertical mph</span></div>
       <div><b id="gs">--</b><span class="mono">Ground mph</span></div>
@@ -179,7 +197,7 @@
   </main>
   <div id="msg"></div>
   <button id="showAll" hidden>FlySight not listed? Show all devices</button>
-  <div id="raw" class="mono">LE LIVE v17</div>
+  <div id="raw" class="mono">LE LIVE v18</div>
   <footer>
     <button id="connect" class="primary">Connect FlySight →</button>
     <button id="units">ft / m</button>

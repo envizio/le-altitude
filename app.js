@@ -1,11 +1,13 @@
-// Live altitude from the FlySight 2's GNSS characteristic, plus shared state and navigation.
-// UUIDs and packet layout from flysight/flysight-2-firmware (STM32_WPAN/App/custom_stm.c, custom_app.c)
+// Live GPS and barometric altitude from the FlySight 2, plus shared state and navigation.
+// UUIDs and packet layouts from flysight/flysight-2-firmware (Docs/ble.md, STM32_WPAN/App/custom_app.c)
 const GNSS_SERVICE = '00000001-cc7a-482a-984a-7f2ed5b3e58f';
 const GNSS_PV_CHAR = '00000000-8e22-4541-9d4c-21edae82ed19';
+const BARO_CHAR = '00000008-8e22-4541-9d4c-21edae82ed19';   // firmware with barometer streaming only
 const STORE_KEY = 'le-live';
 
 const $ = id => document.getElementById(id);
 let device = null, lastMm = null, lastRx = 0, wakeLock = null, wantConnected = false, connecting = false;
+let baro = null, hasBaro = null;   // baro = { h: metres above where the FlySight was switched on, at: Date.now() }
 
 // Remembered between visits: display units, saved dropzones, and the last FlySight
 // state.dzs = [{ name, elev, unit }] with elev in the unit it was entered in
@@ -30,10 +32,15 @@ function render() {
   $('dzBtn').textContent = dz ? dz.name : 'Dropzone';
   $('mode').textContent = agl ? 'AGL' : 'MSL';
   $('mode').disabled = !dz;
+  $('baroUnit').textContent = state.feet ? 'ft' : 'm';
+  const baroLive = baro && Date.now() - baro.at < 3000;
+  $('baroLabel').textContent = hasBaro === false ? '[ Barometric // not on this firmware ]'
+    : baro && !baroLive ? '[ Barometric // no data ]' : '[ Barometric // above switch-on ]';
+  $('baroAlt').textContent = baroLive ? formatAlt(baro.h) : '---';
   if (lastMm === null) return;
-  const m = lastMm / 1000 - (agl ? dzElevM(dz) : 0);
-  $('alt').textContent = Math.round(state.feet ? m * FT_PER_M : m).toLocaleString();
+  $('alt').textContent = formatAlt(lastMm / 1000 - (agl ? dzElevM(dz) : 0));
 }
+const formatAlt = m => Math.round(state.feet ? m * FT_PER_M : m).toLocaleString();
 
 function onPacket(e) {
   const dv = e.target.value;
@@ -58,6 +65,18 @@ function onPacket(e) {
   render();
 }
 
+// Barometer packet, little-endian: time (uint32, ms), pressure (int32, Pa*100), temperature (int16, °C*100),
+// start pressure (int32, Pa*100). The start pressure is the FlySight's first sample since it was switched on,
+// held for the whole session, so the ground reference does not depend on when the phone connected.
+function onBaro(e) {
+  const dv = e.target.value;
+  if (dv.byteLength < 14) return;
+  const pa = dv.getInt32(4, true) / 100, startPa = dv.getInt32(10, true) / 100;
+  if (!(pa > 10000 && pa < 110000 && startPa > 10000 && startPa < 110000)) return;
+  baro = { h: pressureAltitude(pa) - pressureAltitude(startPa), at: Date.now() };
+  render();
+}
+
 /* ── Bluetooth ─────────────────────────────────────────────────────────── */
 
 function adopt(d) {
@@ -76,6 +95,13 @@ async function subscribe() {
   const ch = await service.getCharacteristic(GNSS_PV_CHAR);
   ch.addEventListener('characteristicvaluechanged', onPacket);
   await ch.startNotifications();
+  try {
+    const bc = await service.getCharacteristic(BARO_CHAR);
+    bc.addEventListener('characteristicvaluechanged', onBaro);
+    await bc.startNotifications();
+    hasBaro = true;
+  } catch { hasBaro = false; }   // firmware without barometer streaming: GPS only
+  render();
   setStatus('Connected — waiting for GPS', 'stale');
   try { wakeLock = await navigator.wakeLock?.request('screen'); } catch {}
 }
@@ -213,6 +239,7 @@ setInterval(() => {
   const age = (Date.now() - lastRx) / 1000;
   $('age').textContent = age < 2 ? 'live' : `${Math.round(age)}s ago`;
   if (wantConnected && device?.gatt.connected) setStatus(age < 2 ? 'Live' : 'No data — is the FlySight on with a fix?', age < 2 ? 'live' : 'stale');
+  render();   // marks the barometer reading stale once it goes quiet
 }, 500);
 
 /* ── Navigation: #live, #jumps, #jump/<id> ─────────────────────────────── */
