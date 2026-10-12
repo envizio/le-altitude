@@ -6,7 +6,7 @@ const BARO_CHAR = '00000008-8e22-4541-9d4c-21edae82ed19';   // firmware with bar
 const STORE_KEY = 'le-live';
 
 const $ = id => document.getElementById(id);
-let device = null, lastMm = null, lastRx = 0, wakeLock = null, wantConnected = false, connecting = false;
+let device = null, lastMm = null, lastVel = null, lastRx = 0, wakeLock = null, wantConnected = false, connecting = false;
 let baro = null, hasBaro = null;   // baro = { h: metres above where the FlySight was switched on, at: Date.now() }
 
 // Remembered between visits: display units, saved dropzones, and the last FlySight
@@ -37,10 +37,16 @@ function render() {
   $('baroLabel').textContent = hasBaro === false ? '[ Barometric // not on this firmware ]'
     : baro && !baroLive ? '[ Barometric // no data ]' : '[ Barometric // above switch-on ]';
   $('baroAlt').textContent = baroLive ? formatAlt(baro.h) : '---';
+  document.querySelectorAll('.speedUnit').forEach(el => el.textContent = state.feet ? 'mph' : 'km/h');
+  if (lastVel) {
+    $('vs').textContent = formatSpeed(lastVel.down);  // positive = descending
+    $('gs').textContent = formatSpeed(lastVel.ground);
+  }
   if (lastMm === null) return;
   $('alt').textContent = formatAlt(lastMm / 1000 - (agl ? dzElevM(dz) : 0));
 }
 const formatAlt = m => Math.round(state.feet ? m * FT_PER_M : m).toLocaleString();
+const formatSpeed = mms => Math.round(mms / 1000 * (state.feet ? 2.23694 : 3.6));
 
 function onPacket(e) {
   const dv = e.target.value;
@@ -56,9 +62,7 @@ function onPacket(e) {
   o += 12;
   if ((mask & 0x10) && dv.byteLength >= o + 12) {
     const velN = dv.getInt32(o, true), velE = dv.getInt32(o + 4, true), velD = dv.getInt32(o + 8, true); // mm/s
-    const MPH = 0.00223694;
-    $('vs').textContent = Math.round(velD * MPH);  // positive = descending
-    $('gs').textContent = Math.round(Math.hypot(velN, velE) * MPH);
+    lastVel = { down: velD, ground: Math.hypot(velN, velE) };
   }
   lastRx = Date.now();
   setMsg('');
