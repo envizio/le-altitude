@@ -8,7 +8,7 @@ Use it at https://envizio.github.io/le-altitude/.
 
 ## Open source
 
-The software and documentation are licensed under the GNU Affero General Public License, version 3 only. See [LICENSE](LICENSE) for the license notice and the link to the complete terms. If you run a modified version as a network service, AGPL-3.0 section 13 requires offering its Corresponding Source to users interacting with it remotely.
+The software and documentation are licensed under the GNU Affero General Public License, version 3 only. The complete terms are in [LICENSE](LICENSE). If you run a modified version as a network service, AGPL-3.0 section 13 requires offering its Corresponding Source to users interacting with it remotely.
 
 The Leading Edge name, wordmark, logos, and other trademarks are not licensed by AGPL. In particular, `logo-light.webp`, `favicon.svg`, `favicon.ico`, `favicon-192.png`, `favicon-512.png`, and `apple-touch-icon.png` are brand assets and are not covered by the project license.
 
