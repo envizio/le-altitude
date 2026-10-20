@@ -36,10 +36,18 @@
 
   /* Header and top-level navigation */
   header { display: flex; justify-content: space-between; align-items: stretch; gap: 12px; border-bottom: 1px solid var(--border); }
-  header img { height: 26px; width: auto; display: block; }
-  .brand { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding-bottom: 10px; }
-  .legal-link { font-size: 9px; line-height: 1; letter-spacing: .14em; color: var(--ink-300); text-underline-offset: 2px; }
+  .brand { display: flex; align-items: center; gap: 12px; padding-bottom: 10px; }
+  .wordmark { height: 22px; width: auto; display: block; }
+  .product { display: flex; flex-direction: column; gap: 4px; padding-left: 12px; border-left: 1px solid var(--border); }
+  .product-name { font-family: var(--font-display); font-size: 20px; line-height: 1; text-transform: uppercase; letter-spacing: -.015em; white-space: nowrap; }
+  .legal-link { align-self: flex-start; font-size: 9px; line-height: 1; letter-spacing: .14em; color: var(--ink-300); text-underline-offset: 2px; }
   .legal-link:hover, .legal-link:focus-visible { color: #fff; text-decoration: underline; }
+  @media (min-width: 640px) {
+    .brand { gap: 20px; }
+    .wordmark { height: 30px; }
+    .product { padding-left: 20px; }
+    .product-name { font-size: 26px; }
+  }
   nav { display: flex; gap: 4px; }
   nav a { display: flex; align-items: center; padding: 0 12px 12px; border-bottom: 2px solid transparent; margin-bottom: -1px; letter-spacing: .18em; }
   nav a.on { color: #fff; border-bottom-color: var(--signal-500); }
@@ -172,8 +180,11 @@
 <body>
 <header>
   <div class="brand">
-    <img src="logo-light.webp" alt="Leading Edge">
-    <a class="legal-link mono" href="https://github.com/envizio/le-altitude" target="_blank" rel="noreferrer" aria-label="Source code and AGPL-3.0 license">Source</a>
+    <img src="logo-light.webp" alt="Leading Edge" class="wordmark">
+    <div class="product">
+      <span class="product-name">Altitude</span>
+      <a class="legal-link mono" href="https://github.com/envizio/le-altitude" target="_blank" rel="noreferrer" aria-label="Source code and AGPL-3.0 license">Source</a>
+    </div>
   </div>
   <nav>
     <a id="tabLive" class="mono on" href="#live">Live</a>
@@ -203,7 +214,7 @@
   </main>
   <div id="msg"></div>
   <button id="showAll" hidden>FlySight not listed? Show all devices</button>
-  <div id="raw" class="mono">LE LIVE v21</div>
+  <div id="raw" class="mono">LE LIVE v22</div>
   <footer>
     <button id="connect" class="primary">Connect FlySight →</button>
     <button id="units">ft / m</button>
