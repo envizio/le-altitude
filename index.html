@@ -40,6 +40,8 @@
   .wordmark { height: 22px; width: auto; display: block; }
   .product { display: flex; flex-direction: column; gap: 4px; padding-left: 12px; border-left: 1px solid var(--border); }
   .product-name { font-family: var(--font-display); font-size: 20px; line-height: 1; text-transform: uppercase; letter-spacing: -.015em; white-space: nowrap; }
+  .product-title { display: flex; align-items: center; gap: 8px; }
+  .beta-tag { padding: 3px 4px 2px; border: 1px solid var(--signal-500); font-size: 9px; line-height: 1; letter-spacing: .14em; color: var(--signal-500); }
   .legal-link { align-self: flex-start; font-size: 9px; line-height: 1; letter-spacing: .14em; color: var(--ink-300); text-underline-offset: 2px; }
   .legal-link:hover, .legal-link:focus-visible { color: #fff; text-decoration: underline; }
   @media (min-width: 640px) {
@@ -50,6 +52,8 @@
   }
   nav { display: flex; gap: 4px; }
   nav a { display: flex; align-items: center; padding: 0 12px 12px; border-bottom: 2px solid transparent; margin-bottom: -1px; letter-spacing: .18em; }
+  /* Narrow phones: tighter tabs so the header still fits beside the beta tag */
+  @media (max-width: 389px) { nav a { padding: 0 6px 12px; } }
   nav a.on { color: #fff; border-bottom-color: var(--signal-500); }
   .view { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   .view.scroll { display: block; overflow-y: auto; padding-top: 18px; }
@@ -182,7 +186,10 @@
   <div class="brand">
     <img src="logo-light.webp" alt="Leading Edge" class="wordmark">
     <div class="product">
-      <span class="product-name">Altitude</span>
+      <div class="product-title">
+        <span class="product-name">Altitude</span>
+        <span class="beta-tag mono">Beta</span>
+      </div>
       <a class="legal-link mono" href="https://github.com/envizio/le-altitude" target="_blank" rel="noreferrer" aria-label="Source code and AGPL-3.0 license">Source</a>
     </div>
   </div>
